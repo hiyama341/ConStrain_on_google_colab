@@ -187,7 +187,7 @@ def extract_sites(annotations, templates, names):
         for feature in template.features:
             site = template[feature.location.start:feature.location.end]
             if feature.qualifiers['name'] == anno:
-                site.name = name
+                site.name = names
 
             # If there is an batch anotation we can save it 
             if 'batches' in site.annotations.keys():
@@ -210,7 +210,6 @@ def seq_to_annotation(seqrec_from, seqrec_onto, aType):
     
     strand = 1
     match_index = seq_onto.find(seq_from)
-    print(match_index)
     
     
     # if there is match
@@ -229,8 +228,7 @@ def seq_to_annotation(seqrec_from, seqrec_onto, aType):
             end = reclength - rev_match_index
             
             start = end - len(seq_from)
-            print("start: ", start)
-            print("end: ", end)
+        
         else:
             print("no match! seq:" + str(seqrec_from.name) + "\nnot annealing to:" + str(seqrec_onto.name))
     
@@ -354,6 +352,77 @@ def casembler(bg_strain, site_names=None, gRNAs=None, parts=None, assembly_limit
         
     return functools.reduce(lambda x, y: x+y, assemblies)
 
+
+
+
+def casembler(bg_strain, site_names=None, gRNAs=None, parts=None, assembly_limits=None, assembly_names=None, verbose=False, to_benchling=False):
+    
+
+    """
+    Simulate in vivo assembly and integration
+    
+    Parameters
+    ----------
+    bg_strain      
+    site_names      list of names                      e.g. [X-3, XI-3]    
+    gRNAs           list of 20 bp seqrecords           e.g. [ATF1_gRNA, CroCPR_gRNA]
+    parts           list of list of parts              e.g. [[ATF1_repair_template],[CPR_repair_template]]
+    assembly_limits list of numbers of bp              e.g. [200,400]
+    assembly_names  list of names of DNA post assembly e.g. ["X_3_tADH1_P2_pPGK1", "XI_3_UP_DW"]
+    verbose         write DNA                          e.g. False
+    to_benchling    upload DNA                         e.g. False
+    
+    Returns
+    -------
+    
+    One dseqrecord
+
+    Examples
+    --------
+    """
+
+        
+    
+    assemblies = []
+    for int_no in range(0,len(gRNAs)):  
+        
+        gRNA = gRNAs[int_no]
+        
+        site_name = site_names[int_no]
+        
+        site = extract_sites([site_name], [bg_strain], [site_name])[0]
+        
+        UP, DW = CAS9_cutting(gRNA, site)
+        
+        fragments = [UP] + parts[int_no] +  [DW]
+        
+        assembly = pydna.assembly.Assembly(fragments, limit=assembly_limits[int_no]).assemble_linear()[0]
+        
+        # sometimes pydna.assembly.Assembly distorts the start, end location of features to become negative which produces and error when printing. This function is created as a workaround. 
+        # CPR assembly gives DW_XI_3 annotation called "DW_XI_3" a negative start location.
+        # A quick workaround is to remove featuere
+        remove_features_with_negative_loc(assembly)
+        
+        assembly.name = assembly_names[int_no]
+        
+        assembly_feat = Bio.SeqFeature.SeqFeature(Bio.SeqFeature.FeatureLocation(0, len(assembly), strand=1), type="misc_feature")
+        assembly_feat.qualifiers['name']= site_names[int_no]
+        assembly_feat.qualifiers['label']= site_names[int_no]
+        assembly.features.append(assembly_feat)
+        
+        if verbose:
+            DNAs = [UP] + [assembly] + [DW]
+            for DNA in DNAs:
+                DNA.write("./" + DNA.name + ".gb") # "../data/processed/"
+        
+        if to_benchling:
+            utils.to_benchling(assembly, "to_benchling")
+        
+        assemblies.append(assembly)
+        
+    return functools.reduce(lambda x, y: x+y, assemblies)
+
+
 def UPandDW(strain, isite_name):
     """
     take strain and grna
@@ -416,3 +485,27 @@ def UPandDW(strain, isite_name):
     DWrec.features.append(DW_feature)
     
     return(([UPrec], [DWrec]))
+
+def multiplyList(myList) :
+     
+    # Multiply elements one by one
+    result = 1
+    for x in myList:
+         result = result * x 
+    return result
+
+def removeTupleDuplicates(lst):
+    return [t for t in (set(tuple(i) for i in lst))]
+
+def recs_no_duplicates(recs_with_duplicates):
+    seen_sequences = set()
+    recs_no_dup = []
+    for rec in recs_with_duplicates:
+        if rec.seq.watson not in seen_sequences:
+            recs_no_dup.append(rec)
+            seen_sequences.add(rec.seq.watson)
+    return recs_no_dup
+
+def plate_plot(df, value):
+    cols = [value,'prow','pcol']
+    return df[cols].set_index(['prow', 'pcol']).unstack(level=-1)
