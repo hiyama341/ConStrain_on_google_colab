@@ -398,3 +398,8 @@ def amplicon_by_name(name, amplicons_lst):
     for amplicon in amplicons_lst:
         if amplicon.name == name:
             return amplicon
+
+def mean(lst):
+    mean = sum(lst) / len(lst)
+    
+    return mean
