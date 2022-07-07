@@ -458,17 +458,16 @@ def primer_ta_neb(primer1, primer2):
 
 
 
-
 def Simple_PCR_program(amplicon):
+
+    ''' Simple PCR program designed to give a quick visual representations'''
     amplicon = det_elon_time(amplicon)
     amplicon = det_proc_speed(amplicon)
     
     # ta
     amplicon.annotations['ta Q5 Hot Start'] = primer_ta_neb(str(amplicon.forward_primer.seq), str(amplicon.reverse_primer.seq))
 
-    # tm forward
-
-    # tm reverse
+    # tm forward and reverse 
     amplicon.forward_primer.annotations['tm Q5 Hot Start'] = primer_tm_neb(str(amplicon.forward_primer.seq))
     amplicon.reverse_primer.annotations['tm Q5 Hot Start'] = primer_tm_neb(str(amplicon.reverse_primer.seq))
 
