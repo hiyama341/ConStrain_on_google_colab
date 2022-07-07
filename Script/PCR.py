@@ -394,4 +394,7 @@ def nanophotometer_concentrations(path: pathlib.PosixPath):
     return(concentrations)
 
 
-    
+def amplicon_by_name(name, amplicons_lst):
+    for amplicon in amplicons_lst:
+        if amplicon.name == name:
+            return amplicon
