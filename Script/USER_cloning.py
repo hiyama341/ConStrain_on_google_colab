@@ -467,8 +467,6 @@ def UPandDW(strain, isite_name):
     StartIndex = ChromosomeSeq.find(isite_sequence)
     EndIndex   = StartIndex 
     
-    
-    
     UPseq = ChromosomeSeq[StartIndex + f_dist - f_hom : StartIndex  + f_dist]
     DWseq = ChromosomeSeq[EndIndex + e_dist          : EndIndex + e_dist+ e_hom]
 
@@ -509,3 +507,12 @@ def recs_no_duplicates(recs_with_duplicates):
 def plate_plot(df, value):
     cols = [value,'prow','pcol']
     return df[cols].set_index(['prow', 'pcol']).unstack(level=-1)
+
+def recs_no_duplicates_names(recs_with_duplicates):
+    seen_names = set()
+    recs_no_dup = []
+    for rec in recs_with_duplicates:
+        if rec.name not in seen_names:
+            recs_no_dup.append(rec)
+            seen_names.add(rec.name)
+    return recs_no_dup
