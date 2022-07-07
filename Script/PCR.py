@@ -12,6 +12,12 @@ import pathlib
 import textwrap as _textwrap
 from pydna._pretty import pretty_str as _pretty_str
 import csv
+from pydna.dseqrecord import Dseqrecord
+
+import requests
+import json
+import textwrap as _textwrap
+from pydna._pretty import pretty_str as _pretty_str
 
 
 ''' This part of the lab module is used for PCRs
@@ -137,7 +143,6 @@ def PCR_program(amplicon, pgroup, touch_down = False, ta_tm_refresh = False, pri
     param: pgroup               eg.  product group - telling which polymerase is used
 
     """
-
 
     # Set product group & polymerase(/kit)
     # Product groups: Q5, Q5 Hot Start, OneTaq, OneTaq Hot Start, Phusion, LongAmp Taq, LongAmp Hot Start Taq,
@@ -401,5 +406,102 @@ def amplicon_by_name(name, amplicons_lst):
 
 def mean(lst):
     mean = sum(lst) / len(lst)
-    
+
     return mean
+
+
+
+def primer_tm_neb(primer): 
+
+    url = 'https://tmapi.neb.com/tm/batch'
+    seqpairs = [[primer]]
+
+    input = {
+        "seqpairs": seqpairs,
+        'conc': 0.5,
+        'prodcode': 'q5-0'
+    }
+    headers = {'content-type' : 'application/json'}
+    res = requests.post(url, data=json.dumps(input), headers=headers)
+
+    r = json.loads(res.content)
+
+    if r['success']:
+        for row in r['data']:
+            return(row['tm1'])
+    else:
+        print('request failed')
+        print(r['error'][0])
+
+def primer_ta_neb(primer1, primer2): 
+
+    url = 'https://tmapi.neb.com/tm/batch'
+    seqpairs = [[primer1, primer2]]
+
+    input = {
+        "seqpairs": seqpairs,
+        'conc': 0.5,
+        'prodcode': 'q5-0'
+    }
+    headers = {'content-type' : 'application/json'}
+    res = requests.post(url, data=json.dumps(input), headers=headers)
+
+    r = json.loads(res.content)
+
+    if r['success']:
+        for row in r['data']:
+            return(row['ta'])
+
+    else:
+        print('request failed')
+        print(r['error'][0])
+
+
+
+
+def Simple_PCR_program(amplicon):
+    amplicon = det_elon_time(amplicon)
+    amplicon = det_proc_speed(amplicon)
+    
+    # ta
+    amplicon.annotations['ta Q5 Hot Start'] = primer_ta_neb(str(amplicon.forward_primer.seq), str(amplicon.reverse_primer.seq))
+
+    # tm forward
+
+    # tm reverse
+    amplicon.forward_primer.annotations['tm Q5 Hot Start'] = primer_tm_neb(str(amplicon.forward_primer.seq))
+    amplicon.reverse_primer.annotations['tm Q5 Hot Start'] = primer_tm_neb(str(amplicon.reverse_primer.seq))
+
+
+
+    r"""Returns a string containing a text representation of a suggested
+    PCR program using Taq or similar polymerase.
+    ::
+     |98°C|98°C               |    |tmf:59.5
+     |____|_____          72°C|72°C|tmr:59.7
+     |30s |10s  \ 59.1°C _____|____|30s/kb
+     |    |      \______/ 0:32|5min|GC 51%
+     |    |       30s         |    |1051bp
+    """
+
+    f = _textwrap.dedent(
+        r"""
+                            |98°C|98°C               |    |tmf:{tmf:.1f}
+                            |____|_____          72°C|72°C|tmr:{tmr:.1f}
+                            |30 s|10s  \ {ta:.1f}°C _____|____|{rate}s/kb
+                            |    |      \______/{0:2}:{1:2}|2min|GC {GC_prod}%
+                            |    |       20s         |    |{size}bp
+                            """[
+            1:-1
+        ].format(
+            rate=amplicon.annotations['proc_speed'],
+            size=len(amplicon.seq),
+            ta=amplicon.annotations['ta Q5 Hot Start'],
+            tmf=amplicon.forward_primer.annotations['tm Q5 Hot Start'],
+            tmr=amplicon.reverse_primer.annotations['tm Q5 Hot Start'],
+            GC_prod=int(amplicon.gc()),
+            *map(int, divmod(amplicon.annotations['elongation_time'], 60)),
+        )
+    )
+
+    return _pretty_str(f)
