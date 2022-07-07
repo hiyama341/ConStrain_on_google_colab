@@ -501,9 +501,9 @@ def recs_no_duplicates(recs_with_duplicates):
     seen_sequences = set()
     recs_no_dup = []
     for rec in recs_with_duplicates:
-        if rec.seq.watson not in seen_sequences:
+        if rec.seq not in seen_sequences:
             recs_no_dup.append(rec)
-            seen_sequences.add(rec.seq.watson)
+            seen_sequences.add(rec.seq)
     return recs_no_dup
 
 def plate_plot(df, value):
