@@ -1,5 +1,6 @@
 # Ignore env file
 .env
+
 # ignore 
 .pytest_cache
 
