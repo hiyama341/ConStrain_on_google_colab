@@ -3,8 +3,6 @@ ConStrain
 =========
 
 
-[![ci-cd](https://github.com/hiyama341/ConStrain/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/hiyama341/ConStrain/actions/workflows/main.yml)
-
 
 .. image:: https://img.shields.io/pypi/v/constrain.svg
         :target: https://pypi.python.org/pypi/constrain
